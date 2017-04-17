@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/prasmussen/glot-code-runner/cmd"
-	"github.com/prasmussen/glot-code-runner/language"
+	"./cmd"
+	"./language"
 	"io/ioutil"
 	"os"
+	"net/url"
+	"strings"
 	"path/filepath"
 )
 
@@ -29,8 +31,13 @@ type Result struct {
 }
 
 func main() {
+	s, err := url.QueryUnescape(os.Args[1])
+	r := strings.NewReader(s)
+	if err != nil {
+		exitF("Failed to parse input json (%s)\n", err.Error())
+	}
 	payload := &Payload{}
-	err := json.NewDecoder(os.Stdin).Decode(payload)
+	err = json.NewDecoder(r).Decode(payload)
 
 	if err != nil {
 		exitF("Failed to parse input json (%s)\n", err.Error())
@@ -112,13 +119,16 @@ func exitF(format string, a ...interface{}) {
 	os.Exit(1)
 }
 
-func printResult(stdout, stderr string, err error) {
-	result := &Result{
+func printResult(stdout string, stderr string, err error) {
+	result := Result{
 		Stdout: stdout,
 		Stderr: stderr,
 		Error:  errToStr(err),
 	}
-	json.NewEncoder(os.Stdout).Encode(result)
+	err = json.NewEncoder(os.Stdout).Encode(&result)
+	if err != nil {
+		exitF("Failed to parse output json (%s)\n", err.Error())
+	}
 }
 
 func errToStr(err error) string {
